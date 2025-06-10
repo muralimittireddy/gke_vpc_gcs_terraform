@@ -1,70 +1,87 @@
-# GKE VPC & Terraform Backend on GCS
+# GKE VPC &amp; Terraform Backend on GCS
 
-This repository contains Terraform configurations to deploy a Google Kubernetes Engine (GKE) Autopilot cluster together with the supporting network infrastructure on Google Cloud Platform (GCP). The Terraform state is stored remotely in a Google Cloud Storage (GCS) bucket.
+Terraform code in this repository deploys a Google Kubernetes Engine (GKE) Autopilot
+cluster alongside the required VPC networking. Terraform state is stored in a
+Google Cloud Storage (GCS) bucket so that multiple users can work with the same
+state file.
 
-## Repository Structure
+## Prerequisites
 
-- **main.tf** - Root module that wires the networking and GKE modules together and configures the GCS backend.
-- **backend/** - Stand‑alone configuration that provisions the GCS bucket used as the Terraform backend.
-- **modules/** - Reusable Terraform modules:
-  - `vpc/` provisions a custom VPC, private and public subnets, and Cloud NAT.
-  - `gke/` deploys the GKE Autopilot cluster and related IAM resources.
-- **variables.tf** and **outputs.tf** - Input variables and outputs for the root module.
+- A GCP project with billing enabled
+- [Terraform CLI](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
 
-## Getting Started
+Enable the necessary APIs and authenticate:
 
-1. Ensure the [Terraform CLI](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) and the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) are installed.
-2. Authenticate with GCP:
-   ```bash
-   gcloud auth application-default login
-   ```
-3. (Optional) Provision the backend bucket:
+```bash
+gcloud services enable compute.googleapis.com container.googleapis.com
+gcloud auth application-default login
+```
+
+## Repository Layout
+
+- `main.tf` – Root module wiring the networking and GKE modules and configuring the GCS backend
+- `backend/` – Stand‑alone configuration to create the remote state bucket
+- `modules/` – Reusable modules
+  - `vpc/` – Creates a custom VPC, public/private subnets and Cloud NAT
+  - `gke/` – Provisions the Autopilot cluster and IAM roles
+- `variables.tf` &amp; `outputs.tf` – Root module inputs and outputs
+
+## Usage
+
+1. **(Optional)** Create the backend bucket if you do not already have one:
+
    ```bash
    cd backend
    terraform init
    terraform apply
    cd ..
    ```
-4. Initialise and apply the root module:
+
+   Adjust the bucket name in `main.tf` if you used a different name.
+
+2. Initialise and apply the root module:
+
    ```bash
    terraform init
    terraform apply
    ```
 
-Terraform will create the VPC, subnets, Cloud NAT, and a new GKE Autopilot cluster. State is stored in the bucket specified in `main.tf`.
+   Pass custom values via `terraform.tfvars` or the `-var` flag.
+
+Terraform provisions the VPC, subnets, Cloud NAT and a new GKE Autopilot
+cluster. The state file is written to the bucket configured in `main.tf`.
 
 ## Input Variables
 
-Key variables defined in [variables.tf](variables.tf):
+Important variables defined in [variables.tf](variables.tf):
 
 | Name | Description | Default |
 |------|-------------|---------|
 | `project_id` | GCP project ID | n/a |
-| `region` | GCP region | `us-central1` |
+| `region` | Deployment region | `us-central1` |
 | `cluster_name` | Name of the GKE cluster | `my-gke-cluster` |
-| `private_subnet_cidrs` | CIDR ranges for private subnets | `["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]` |
-| `public_subnet_cidrs` | CIDR ranges for public subnets | `["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]` |
-| `node_groups` | Map describing node pool settings | see file |
-
-Adjust these variables as needed via a `terraform.tfvars` file or the `-var` flag.
+| `private_subnet_cidrs` | CIDRs for private subnets | `["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]` |
+| `public_subnet_cidrs` | CIDRs for public subnets | `["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]` |
+| `node_groups` | Node pool settings | see file |
 
 ## Outputs
 
-After apply, the following values are output:
+After a successful apply you will see:
 
-- `vpc_id` – ID of the created VPC.
-- `private_subnet_ids` – IDs of the private subnets.
-- `public_subnet_ids` – IDs of the public subnets.
+- `vpc_id` – ID of the created VPC
+- `private_subnet_ids` – IDs of the private subnets
+- `public_subnet_ids` – IDs of the public subnets
 
 ## Cleanup
 
-To remove all resources managed by this configuration, run:
+Remove all resources with:
 
 ```bash
 terraform destroy
 ```
 
-## License
+---
 
 This project is provided as-is under the MIT license.
 
